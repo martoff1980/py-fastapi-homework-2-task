@@ -23,17 +23,17 @@ router = APIRouter()
 # Helper function to get or create related entities
 async def get_or_create_country(db: AsyncSession, country_code: str) -> CountryModel:
     """Get existing country or create a new one."""
-    code =country_code.upper().strip()
-    
+    code = country_code.upper().strip()
+
     stmt = select(CountryModel).where(CountryModel.code == code)
     result = await db.execute(stmt)
     country = result.scalar_one_or_none()
-    
+
     if not country:
         country = CountryModel(code=country_code.upper(), name=None)
         db.add(country)
         await db.flush()
-    
+
     return country
 
 
@@ -44,14 +44,14 @@ async def get_or_create_genres(db: AsyncSession, genre_names: list[str]) -> list
         stmt = select(GenreModel).where(GenreModel.name == genre_name)
         result = await db.execute(stmt)
         genre = result.scalar_one_or_none()
-        
+
         if not genre:
             genre = GenreModel(name=genre_name)
             db.add(genre)
             await db.flush()
-        
+
         genres.append(genre)
-    
+
     return genres
 
 
@@ -62,14 +62,14 @@ async def get_or_create_actors(db: AsyncSession, actor_names: list[str]) -> list
         stmt = select(ActorModel).where(ActorModel.name == actor_name)
         result = await db.execute(stmt)
         actor = result.scalar_one_or_none()
-        
+
         if not actor:
             actor = ActorModel(name=actor_name)
             db.add(actor)
             await db.flush()
-        
+
         actors.append(actor)
-    
+
     return actors
 
 
@@ -80,14 +80,14 @@ async def get_or_create_languages(db: AsyncSession, language_names: list[str]) -
         stmt = select(LanguageModel).where(LanguageModel.name == language_name)
         result = await db.execute(stmt)
         language = result.scalar_one_or_none()
-        
+
         if not language:
             language = LanguageModel(name=language_name)
             db.add(language)
             await db.flush()
-        
+
         languages.append(language)
-    
+
     return languages
 
 
@@ -103,22 +103,22 @@ async def get_movies(
     """
     # Calculate offset
     offset = (page - 1) * per_page
-    
+
     # Get total count of movies
     count_stmt = select(func.count(MovieModel.id))
     result = await db.execute(count_stmt)
     total_items = result.scalar_one()
-    
+
     if total_items == 0:
         raise HTTPException(status_code=404, detail="No movies found.")
-    
+
     # Calculate total pages
     total_pages = math.ceil(total_items / per_page)
-    
+
     # Check if page exists
     if page > total_pages:
         raise HTTPException(status_code=404, detail="No movies found.")
-    
+
     # Get movies for current page
     stmt = (
         select(MovieModel)
@@ -128,7 +128,7 @@ async def get_movies(
     )
     result = await db.execute(stmt)
     movies = result.scalars().all()
-    
+
     # Build response
     movie_list = [
         MovieListItemSchema(
@@ -140,18 +140,18 @@ async def get_movies(
         )
         for movie in movies
     ]
-    
+
     # Build pagination links
     base_url = "/theater/movies/"
     prev_page = None
     next_page = None
-    
+
     if page > 1:
         prev_page = f"{base_url}?page={page - 1}&per_page={per_page}"
-    
+
     if page < total_pages:
         next_page = f"{base_url}?page={page + 1}&per_page={per_page}"
-    
+
     return MovieListResponseSchema(
         movies=movie_list,
         prev_page=prev_page,
@@ -182,13 +182,13 @@ async def get_movie_details(
     )
     result = await db.execute(stmt)
     movie = result.scalar_one_or_none()
-    
+
     if not movie:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Movie with the given ID was not found."
         )
-    
+
     return MovieDetailSchema.model_validate(movie)
 
 
@@ -208,21 +208,21 @@ async def create_movie(
     )
     result = await db.execute(stmt)
     existing_movie = result.scalar_one_or_none()
-    
+
     if existing_movie:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"A movie with the name '{movie_data.name}' and release date '{movie_data.date}' already exists."
         )
-    
+
     # Get or create country
     country = await get_or_create_country(db, movie_data.country)
-    
+
     # Get or create genres, actors, languages
     genres = await get_or_create_genres(db, movie_data.genres)
     actors = await get_or_create_actors(db, movie_data.actors)
     languages = await get_or_create_languages(db, movie_data.languages)
-    
+
     # Create new movie
     new_movie = MovieModel(
         name=movie_data.name,
@@ -238,10 +238,10 @@ async def create_movie(
         actors=actors,
         languages=languages
     )
-    
+
     db.add(new_movie)
     await db.flush()
-    
+
     # Refresh with relationships loaded
     stmt = (
         select(MovieModel)
@@ -255,9 +255,9 @@ async def create_movie(
     )
     result = await db.execute(stmt)
     created_movie = result.scalar_one()
-    
+
     await db.commit()
-    
+
     return MovieDetailSchema.model_validate(created_movie)
 
 
@@ -273,16 +273,16 @@ async def delete_movie(
     stmt = select(MovieModel).where(MovieModel.id == movie_id)
     result = await db.execute(stmt)
     movie = result.scalar_one_or_none()
-    
+
     if not movie:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Movie with the given ID was not found."
         )
-    
+
     await db.delete(movie)
     await db.commit()
-    
+
     return None
 
 
@@ -300,21 +300,21 @@ async def update_movie(
     stmt = select(MovieModel).where(MovieModel.id == movie_id)
     result = await db.execute(stmt)
     movie = result.scalar_one_or_none()
-    
+
     if not movie:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Movie with the given ID was not found."
         )
-    
+
     # Update only provided fields
     update_dict = update_data.model_dump(exclude_unset=True)
-    
+
     if update_dict:
         # Handle enum conversion for status
         if 'status' in update_dict and update_dict['status']:
             update_dict['status'] = update_dict['status'].value
-        
+
         # Perform update
         stmt = (
             update(MovieModel)
@@ -323,5 +323,5 @@ async def update_movie(
         )
         await db.execute(stmt)
         await db.commit()
-    
+
     return {"detail": "Movie updated successfully."}

@@ -8,7 +8,7 @@ class MovieStatus(str, Enum):
     RELEASED = "Released"
     POST_PRODUCTION = "Post Production"
     IN_PRODUCTION = "In Production"
-    
+
 
 class CountrySchema(BaseModel):
     id: int
@@ -17,22 +17,27 @@ class CountrySchema(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class GenreSchema(BaseModel):
     id: int
     name: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
 class ActorSchema(BaseModel):
     id: int
     name: str
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class LanguageSchema(BaseModel):
     id: int
     name: str
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class MovieDetailSchema(BaseModel):
     id: int
@@ -50,6 +55,7 @@ class MovieDetailSchema(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class MovieListItemSchema(BaseModel):
     id: int
     name: str
@@ -59,14 +65,16 @@ class MovieListItemSchema(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class MovieListResponseSchema(BaseModel):
     movies: List[MovieListItemSchema]
     prev_page: Optional[str] = None
     next_page: Optional[str] = None
     total_pages: int
     total_items: int
-    
+
     model_config = ConfigDict(from_attributes=True)
+
 
 class MovieCreateSchema(BaseModel):
     name: str = Field(..., max_length=255)
